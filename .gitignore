@@ -2,3 +2,4 @@ node_modules/
 .vite/
 .DS_Store
 *.log
+docs/
