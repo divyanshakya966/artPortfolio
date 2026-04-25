@@ -252,23 +252,6 @@ if (!prefersReducedMotion) {
     ease: 'sine.inOut',
   });
 
-  // Staggered stack rotation
-  gsap.to('.stack-img-front', {
-    rotation: '+=2',
-    duration: 5,
-    repeat: -1,
-    yoyo: true,
-    ease: 'sine.inOut',
-  });
-  gsap.to('.stack-img-mid', {
-    rotation: '-=1.5',
-    duration: 7,
-    repeat: -1,
-    yoyo: true,
-    ease: 'sine.inOut',
-    delay: 1,
-  });
-
   // Marquee: pause on hover
   const track = document.querySelector('.marquee-track');
   if (track) {
@@ -370,3 +353,92 @@ if (!prefersReducedMotion && !isMobile()) {
     });
   });
 }
+
+/* ─────────────────────────────────────────
+   HERO STACK SWIPE / DRAG
+───────────────────────────────────────── */
+(function initHeroStackSwipe() {
+  const stack = document.querySelector('.hero-image-stack');
+  if (!stack) return;
+
+  const cards = Array.from(stack.querySelectorAll('.stack-img'));
+  if (cards.length < 2) return;
+
+  // Initial visual order keeps existing back/mid/front composition.
+  const order = cards.map((_, idx) => idx);
+
+  function paintOrder() {
+    cards.forEach((card) => {
+      card.classList.remove('is-back', 'is-mid', 'is-front');
+    });
+
+    if (order[0] != null) cards[order[0]].classList.add('is-back');
+    if (order[1] != null) cards[order[1]].classList.add('is-mid');
+    if (order[2] != null) cards[order[2]].classList.add('is-front');
+  }
+
+  function rotateNext() {
+    order.push(order.shift());
+    paintOrder();
+  }
+
+  function rotatePrev() {
+    order.unshift(order.pop());
+    paintOrder();
+  }
+
+  paintOrder();
+
+  let startX = 0;
+  let startY = 0;
+  let dragging = false;
+  let pointerId = null;
+
+  const SWIPE_THRESHOLD = 38;
+
+  function onPointerDown(event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+    dragging = true;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    stack.classList.add('is-dragging');
+    stack.setPointerCapture(pointerId);
+  }
+
+  function finishSwipe(event) {
+    if (!dragging) return;
+
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+
+    if (Math.abs(dx) > SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) rotateNext();
+      else rotatePrev();
+    }
+
+    dragging = false;
+    stack.classList.remove('is-dragging');
+
+    if (pointerId !== null && stack.hasPointerCapture(pointerId)) {
+      stack.releasePointerCapture(pointerId);
+    }
+    pointerId = null;
+  }
+
+  stack.addEventListener('pointerdown', onPointerDown);
+  stack.addEventListener('pointerup', finishSwipe);
+  stack.addEventListener('pointercancel', finishSwipe);
+
+  stack.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      rotatePrev();
+    }
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      rotateNext();
+    }
+  });
+})();
